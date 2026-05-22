@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ImageStatus {
+  ACTIVE
+  DELETED
+  PURGED
+}
+
+enum UserRole {
+  admin
+  staff
+}
+
+model User {
+  id                Int          @id @default(autoincrement())
+  email             String       @unique
+  passwordHash      String       @map("password_hash")
+  name              String?
+  role              UserRole     @default(staff)
+  isActive          Boolean      @default(true) @map("is_active")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  createdPlaces     Place[]      @relation("PlaceCreatedBy")
+  updatedPlaces     Place[]      @relation("PlaceUpdatedBy")
+  createdMediaFiles MediaFile[]  @relation("MediaFileCreatedBy")
+  updatedMediaFiles MediaFile[]  @relation("MediaFileUpdatedBy")
+  createdPlaceMedia PlaceMedia[] @relation("PlaceMediaCreatedBy")
+  updatedPlaceMedia PlaceMedia[] @relation("PlaceMediaUpdatedBy")
+
+  @@map("users")
+}
+
+model Image {
+  id               String      @id @default(uuid()) @db.Uuid
+  originalFilename String
+  storedFilename   String
+  relativePath     String      @unique
+  mimeType         String
+  extension        String
+  sizeBytes        BigInt
+  width            Int?
+  height           Int?
+  checksumSha256   String
+  title            String?
+  description      String?
+  altText          String?
+  tags             String[]    @default([])
+  status           ImageStatus @default(ACTIVE)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  deletedAt        DateTime?
+
+  @@index([status, createdAt])
+  @@index([checksumSha256])
+  @@index([deletedAt])
+}
+
+model Activity {
+  id          Int       @id
+  sourceStt   Int?      @map("source_stt")
+  name        String
+  description String?
+  driveLink   String?   @map("drive_link")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime? @map("created_at")
+  updatedAt   DateTime? @map("updated_at")
+
+  @@map("activities")
+}
+
+model AppAsset {
+  id        Int       @id
+  sourceStt Int?      @map("source_stt")
+  type      String
+  title     String?
+  url       String
+  sortOrder Int       @default(0) @map("sort_order")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@map("app_assets")
+}
+
+model BestSellerItem {
+  id          Int       @id
+  listId      Int       @map("list_id")
+  targetType  String    @map("target_type")
+  targetId    Int       @map("target_id")
+  title       String?
+  description String?
+  badgeText   String?   @map("badge_text")
+  rankOrder   Int       @default(0) @map("rank_order")
+  startDate   DateTime? @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime? @map("created_at")
+  updatedAt   DateTime? @map("updated_at")
+
+  @@map("best_seller_items")
+}
+
+model BestSellerList {
+  id              Int       @id
+  code            String
+  title           String
+  description     String?
+  displayPosition String?   @map("display_position")
+  sortOrder       Int       @default(0) @map("sort_order")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime? @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+
+  @@map("best_seller_lists")
+}
+
+model Category {
+  id          Int       @id
+  code        String
+  name        String
+  description String?
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime? @map("created_at")
+  updatedAt   DateTime? @map("updated_at")
+
+  @@map("categories")
+}
+
+model MediaFile {
+  id              Int       @id
+  driveFileId     String    @map("drive_file_id")
+  originalName    String?   @map("original_name")
+  mimeType        String?   @map("mime_type")
+  fileSize        Int?      @map("file_size")
+  width           Int?
+  height          Int?
+  publicPath      String?   @map("public_path")
+  checksum        String?
+  status          String?   @default("downloaded")
+  errorCode       String?   @map("error_code")
+  errorMessage    String?   @map("error_message")
+  downloadedAt    DateTime? @map("downloaded_at")
+  createdAt       DateTime? @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+  createdByUserId Int?      @map("created_by_user_id")
+  updatedByUserId Int?      @map("updated_by_user_id")
+  createdBy       User?     @relation("MediaFileCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedBy       User?     @relation("MediaFileUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@map("media_files")
+}
+
+model Note {
+  id          Int       @id
+  sourceStt   Int?      @map("source_stt")
+  category    String?
+  title       String
+  description String?
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime? @map("created_at")
+  updatedAt   DateTime? @map("updated_at")
+
+  @@map("notes")
+}
+
+model PlaceMedia {
+  id              Int       @id
+  ownerType       String    @map("owner_type")
+  ownerId         Int       @map("owner_id")
+  mediaFileId     Int       @map("media_file_id")
+  sourceId        Int?      @map("source_id")
+  sortOrder       Int       @default(0) @map("sort_order")
+  isPrimary       Boolean   @default(false) @map("is_primary")
+  createdAt       DateTime? @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+  createdByUserId Int?      @map("created_by_user_id")
+  updatedByUserId Int?      @map("updated_by_user_id")
+  createdBy       User?     @relation("PlaceMediaCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedBy       User?     @relation("PlaceMediaUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@map("place_media")
+}
+
+model PlaceMediaSource {
+  id            Int       @id
+  ownerType     String    @map("owner_type")
+  ownerId       Int       @map("owner_id")
+  sourceUrl     String    @map("source_url")
+  sourceKind    String?   @map("source_kind")
+  driveId       String?   @map("drive_id")
+  status        String?   @default("pending")
+  lastCheckedAt DateTime? @map("last_checked_at")
+  errorCode     String?   @map("error_code")
+  errorMessage  String?   @map("error_message")
+  createdAt     DateTime? @map("created_at")
+  updatedAt     DateTime? @map("updated_at")
+
+  @@map("place_media_sources")
+}
+
+model PlaceTag {
+  placeId   Int       @map("place_id")
+  tagId     Int       @map("tag_id")
+  createdAt DateTime? @map("created_at")
+
+  @@id([placeId, tagId])
+  @@map("place_tags")
+}
+
+model Place {
+  id              Int       @id
+  categoryId      Int       @map("category_id")
+  sourceSheet     String?   @map("source_sheet")
+  sourceStt       Int?      @map("source_stt")
+  externalId      String?   @map("external_id")
+  name            String
+  model           String?
+  serviceType     String?   @map("service_type")
+  style           String?
+  bestTime        String?   @map("best_time")
+  direction       String?
+  highlights      String?
+  note            String?
+  address         String?
+  areaText        String?   @map("area_text")
+  ward            String?
+  district        String?
+  city            String?   @default("Đà Lạt")
+  priceText       String?   @map("price_text")
+  priceMin        Int?      @map("price_min")
+  priceMax        Int?      @map("price_max")
+  isFree          Boolean   @default(false) @map("is_free")
+  currency        String?   @default("VND")
+  openingHours    String?   @map("opening_hours")
+  phone           String?
+  partnerRelation String?   @map("partner_relation")
+  partnerPriority Int       @default(0) @map("partner_priority")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime? @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+  mealType        String?   @map("meal_type")
+  createdByUserId Int?      @map("created_by_user_id")
+  updatedByUserId Int?      @map("updated_by_user_id")
+  createdBy       User?     @relation("PlaceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedBy       User?     @relation("PlaceUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@map("places")
+}
+
+model RawRow {
+  id          Int       @id
+  importId    Int?      @map("import_id")
+  sourceSheet String    @map("source_sheet")
+  sourceStt   Int?      @map("source_stt")
+  rawJson     String    @map("raw_json")
+  importedAt  DateTime? @map("imported_at")
+
+  @@map("raw_rows")
+}
+
+model SourceImport {
+  id          Int       @id
+  fileName    String    @map("file_name")
+  filePath    String?   @map("file_path")
+  importedAt  DateTime? @map("imported_at")
+  totalRows   Int       @default(0) @map("total_rows")
+  successRows Int       @default(0) @map("success_rows")
+  failedRows  Int       @default(0) @map("failed_rows")
+  note        String?
+
+  @@map("source_imports")
+}
+
+model Tag {
+  id          Int       @id
+  code        String
+  name        String
+  groupName   String?   @map("group_name")
+  description String?
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime? @map("created_at")
+  updatedAt   DateTime? @map("updated_at")
+
+  @@map("tags")
+}

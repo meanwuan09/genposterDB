@@ -1,0 +1,7 @@
+.env
+node_modules/
+GenposterV2.1/
+genposter_import/
+accset/
+apps/**/.next/
+apps/**/dist/
