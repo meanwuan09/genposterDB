@@ -4,7 +4,7 @@ Admin platform for restaurant/place data.
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 20+
 - npm
 - PostgreSQL, or Docker with Docker Compose
 
@@ -39,6 +39,17 @@ Open:
 
 - Web: `http://localhost:3001`
 - API health: `http://localhost:3000/health`
+
+`npm run dev` runs both apps:
+
+- API: `apps/api`, `http://localhost:3000`
+- Web: `apps/web`, `http://0.0.0.0:3001`
+
+For local-only web development, use:
+
+```bash
+npm run dev:local
+```
 
 Default seeded accounts:
 
@@ -76,13 +87,89 @@ npm run seed
 If you are using the system PostgreSQL on Linux instead of Docker, set
 `DATABASE_URL` to the real credentials for that server, commonly port `5432`.
 
-## Run Through Cloudflare Tunnel
+## Run The Full Project On Linux
 
-Run the web app on all interfaces:
+Install Node.js 20+ with `nvm`:
 
 ```bash
-cd apps/web
-npx next dev --webpack -H 0.0.0.0 -p 3001
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.bashrc
+nvm install 20
+nvm use 20
+node -v
+```
+
+Clone or enter the project:
+
+```bash
+cd ~/genposterDB
+```
+
+Create `.env`:
+
+```bash
+cat > .env <<'EOF'
+DATABASE_URL="postgresql://postgres:040904@localhost:5433/image_metadata_api?schema=public"
+API_PORT=3000
+WEB_ORIGIN="http://localhost:3001"
+API_BASE_URL="http://127.0.0.1:3000/api/v1"
+NEXT_PUBLIC_API_BASE_URL="http://127.0.0.1:3000/api/v1"
+JWT_SECRET="dev-secret"
+EOF
+```
+
+Install dependencies and prepare the database:
+
+```bash
+npm install
+docker compose up -d
+npm run prisma:generate
+npm run prisma:migrate
+npm run seed
+```
+
+Run API and web together:
+
+```bash
+npm run dev
+```
+
+In another terminal, verify both services:
+
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/health/db
+curl -I http://localhost:3001
+```
+
+Open the web app:
+
+```text
+http://localhost:3001
+```
+
+If accessing from another device on the same LAN, use the Linux machine IP:
+
+```bash
+ip addr
+```
+
+Then open:
+
+```text
+http://LINUX_IP:3001
+```
+
+If LAN access fails but local `curl` works, use Cloudflare Tunnel or check the
+router/firewall network path.
+
+## Run Through Cloudflare Tunnel
+
+Run the full project first:
+
+```bash
+cd ~/genposterDB
+npm run dev
 ```
 
 In another terminal:
@@ -91,6 +178,15 @@ In another terminal:
 cloudflared tunnel --url http://localhost:3001
 ```
 
+Open the generated `https://...trycloudflare.com` URL.
+
 Next.js dev mode blocks unknown tunnel origins unless they are listed in
 `apps/web/next.config.ts`. This project allows `*.trycloudflare.com` for dev
 tunnels.
+
+If using a fixed Cloudflare domain, set `WEB_ORIGIN` in `.env` to that domain
+and restart `npm run dev`:
+
+```env
+WEB_ORIGIN="https://admin.example.com"
+```
